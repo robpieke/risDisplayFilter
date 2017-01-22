@@ -12,10 +12,10 @@ int Metal::Init(RixContext &ctx, char const *pluginPath)
 RixSCParamInfo const *Metal::GetParamTable()
 {
 	static RixSCParamInfo s_ptable[] =
-			{
-					RixSCParamInfo("albedo", k_RixSCColor),
-					RixSCParamInfo()
-			};
+	{
+		RixSCParamInfo("albedo", k_RixSCColor),
+		RixSCParamInfo()
+	};
 	return &s_ptable[0];
 }
 

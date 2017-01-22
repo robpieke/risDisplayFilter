@@ -14,5 +14,6 @@ add_library(Occlusion MODULE OcclusionIntegrator.cpp OcclusionIntegrator.h Sampl
 add_library(Pathtracer MODULE PathtracerIntegrator.cpp PathtracerIntegrator.h SampleFilterInstance.h)
 add_library(Lambert MODULE Lambert.cpp Lambert.h)
 add_library(Metal MODULE Metal.cpp Metal.h)
+add_library(Light MODULE Light.cpp Light.h Light.cpp Light.h)
 
-set_target_properties(Sphere MovingSphere Perspective Default Occlusion Pathtracer Lambert Metal PROPERTIES PREFIX "")
+set_target_properties(Sphere MovingSphere Perspective Default Occlusion Pathtracer Lambert Metal Light PROPERTIES PREFIX "")

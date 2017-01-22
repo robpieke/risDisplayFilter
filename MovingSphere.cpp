@@ -69,6 +69,10 @@ void MovingSphere::Filter(RixSampleFilterContext &fCtx, RtConstPointer instance)
 	RtColorRGB cTmp;
 	for(int i = 0; i < fCtx.numSamples; ++i)
 	{
+		fCtx.Read(data->rayDChannel, i, cTmp);
+		RtVector3 rayD(cTmp);
+		if(rayD.LengthSq() == 0.f) continue;
+
 		RtFloat rayT;
 		fCtx.Read(data->rayTChannel, i, rayT);
 		RtPoint3 centre = data->centre0 + rayT * (data->centre1 - data->centre0);
@@ -76,10 +80,8 @@ void MovingSphere::Filter(RixSampleFilterContext &fCtx, RtConstPointer instance)
 		fCtx.Read(data->rayOChannel, i, cTmp);
 		RtPoint3 rayO(cTmp);
 		RtVector3 co = rayO - centre;
-		fCtx.Read(data->rayDChannel, i, cTmp);
-		RtVector3 rayD(cTmp);
 		RtFloat a = rayD.LengthSq();
-		RtFloat b = 2 * RtVector3(cTmp).Dot(co);
+		RtFloat b = 2 * rayD.Dot(co);
 		RtFloat c = co.Dot(co) - data->radius * data->radius;
 		RtFloat d = b * b - 4 * a * c;
 

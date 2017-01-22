@@ -28,6 +28,7 @@ int PathtracerIntegrator::CreateInstanceData(RixContext &ctx, char const *handle
 	data->camera.f = nullptr;
 	data->rayOffset = 0.01f;
 	data->maxPathLength = 5;
+	data->skyColour = RtColorRGB(1.f);
 
 	int paramId;
 	if(0 == params->GetParamId("camera", &paramId))
@@ -52,6 +53,7 @@ int PathtracerIntegrator::CreateInstanceData(RixContext &ctx, char const *handle
 	}
 	if(0 == params->GetParamId("maxPathLength", &paramId)) params->EvalParam(paramId, 0, &data->maxPathLength);
 	if(0 == params->GetParamId("rayOffset", &paramId)) params->EvalParam(paramId, 0, &data->rayOffset);
+	if(0 == params->GetParamId("skyColor", &paramId)) params->EvalParam(paramId, 0, &data->skyColour);
 
 	RixRenderState *renderState = (RixRenderState*) ctx.GetRixInterface(k_RixRenderState);
 	RixRenderState::FrameInfo frameInfo;
@@ -88,6 +90,8 @@ void PathtracerIntegrator::Filter(RixSampleFilterContext &fCtx, RtConstPointer i
 		fCtx.Write(data->rayOChannel, i, *(RtColorRGB*)(&o.x));
 		fCtx.Write(data->rayDChannel, i, *(RtColorRGB*)(&d.x));
 		fCtx.Write(data->rayTChannel, i, fCtx.shutter[i]);
+		fCtx.Write(data->ciChannel, i, RtColorRGB(1.f));
+		fCtx.Write(data->zChannel, i, FLT_MAX);
 	}
 
 	// Adjust/reset up the camera rays
@@ -101,26 +105,13 @@ void PathtracerIntegrator::Filter(RixSampleFilterContext &fCtx, RtConstPointer i
 
 	for(int pathSegment = 0; pathSegment < data->maxPathLength; ++pathSegment)
 	{
-		// Trace the scene, first resetting the depth
+		// Trace the scene
 		//
-		for(int i = 0; i < fCtx.numSamples; ++i) fCtx.Write(data->zChannel, i, FLT_MAX);
 		for(auto geo : data->world)
 		{
 			RtConstPointer instanceData;
 			fCtx.IsEnabled(geo.i, &instanceData);
 			geo.f->Filter(fCtx, instanceData);
-		}
-
-		// Start with B&W "miss/hit" primary ray results
-		//
-		if(pathSegment == 0)
-		{
-			for(int i = 0; i < fCtx.numSamples; ++i)
-			{
-				RtFloat z;
-				fCtx.Read(data->zChannel, i, z);
-				fCtx.Write(data->ciChannel, i, z == FLT_MAX ? RtColorRGB(0.f) : RtColorRGB(1.f));
-			}
 		}
 
 		// Collect an inventory of all the hit materials
@@ -130,7 +121,8 @@ void PathtracerIntegrator::Filter(RixSampleFilterContext &fCtx, RtConstPointer i
 		{
 			RtFloat z;
 			fCtx.Read(data->zChannel, i, z);
-			if(z == FLT_MAX) continue;
+			// Ray miss or no ray
+			if(z == FLT_MAX || z == -1) continue;
 			RtColorRGB cTmp;
 			fCtx.Read(data->matChannel, i, cTmp);
 			hitMaterials.insert(*reinterpret_cast<SampleFilterInstance**>(&cTmp));
@@ -145,7 +137,8 @@ void PathtracerIntegrator::Filter(RixSampleFilterContext &fCtx, RtConstPointer i
 				fCtx.Write(data->maskChannel, i, 0.f);
 				RtFloat z;
 				fCtx.Read(data->zChannel, i, z);
-				if(z == FLT_MAX) continue;
+				// Ray miss or no ray
+				if(z == FLT_MAX || z == -1) continue;
 				RtColorRGB cTmp;
 				fCtx.Read(data->matChannel, i, cTmp);
 				SampleFilterInstance *material = *reinterpret_cast<SampleFilterInstance**>(&cTmp);
@@ -162,10 +155,22 @@ void PathtracerIntegrator::Filter(RixSampleFilterContext &fCtx, RtConstPointer i
 		{
 			RtFloat z;
 			fCtx.Read(data->zChannel, i, z);
-			if(z == FLT_MAX) continue;
-			RtColorRGB albedo, Ci;
-			fCtx.Read(data->albedoChannel, i, albedo);
+			// No ray
+			if(z == -1.f) continue;
+			RtColorRGB Ci;
 			fCtx.Read(data->ciChannel, i, Ci);
+			RtColorRGB d;
+			fCtx.Read(data->rayDChannel, i, d);
+			// Ray miss
+			if(z == FLT_MAX && !d.IsZero())
+			{
+				fCtx.Write(data->ciChannel, i, Ci * data->skyColour);
+				fCtx.Write(data->rayDChannel, i, RtColorRGB(0.f));
+				fCtx.Write(data->zChannel, i, -1.f);
+				continue;
+			}
+			RtColorRGB albedo;
+			fCtx.Read(data->albedoChannel, i, albedo);
 			fCtx.Write(data->ciChannel, i, Ci * albedo);
 		}
 
@@ -176,18 +181,22 @@ void PathtracerIntegrator::Filter(RixSampleFilterContext &fCtx, RtConstPointer i
 			RtColorRGB P, D;
 			fCtx.Read(data->pChannel, i, P);
 			fCtx.Read(data->rayDChannel, i, D);
+			if(D.IsZero()) fCtx.Write(data->zChannel, i, -1.f);
+			else fCtx.Write(data->zChannel, i, FLT_MAX);
 			fCtx.Write(data->rayOChannel, i, P + D * data->rayOffset);
 		}
 
 	}
 
-	// Final "shade-to-black" for rays that never escaped
+	// "Shade to black" rays that never escaped
 	//
 	for(int i = 0; i < fCtx.numSamples; ++i)
 	{
+		RtColorRGB D;
 		RtFloat z;
+		fCtx.Read(data->rayDChannel, i, D);
 		fCtx.Read(data->zChannel, i, z);
-		if(z != FLT_MAX) fCtx.Write(data->ciChannel, i, RtColorRGB(0.f));
+		if(!D.IsZero() && z != -1) fCtx.Write(data->ciChannel, i, RtColorRGB(0.f));
 	}
 }
 
@@ -199,6 +208,7 @@ RixSCParamInfo const *PathtracerIntegrator::GetParamTable()
 		RixSCParamInfo("world", k_RixSCSampleFilter, k_RixSCInput, 0),
 		RixSCParamInfo("rayOffset", k_RixSCFloat),
 		RixSCParamInfo("maxPathLength", k_RixSCInteger),
+		RixSCParamInfo("skyColor", k_RixSCColor),
 		RixSCParamInfo()
 	};
 	return &s_ptable[0];

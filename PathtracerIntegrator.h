@@ -28,6 +28,7 @@ private:
 		std::vector<SampleFilterInstance> world;
 		RtFloat rayOffset;
 		int maxPathLength;
+		RtColorRGB skyColour;
 		RixChannelId ciChannel;
 		RixChannelId zChannel;
 		RixChannelId nChannel;

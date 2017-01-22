@@ -14,6 +14,7 @@ Display "+material.exr" "null" "color material"
 Display "+mask.exr" "null" "float mask"
 Display "+albedo.exr" "null" "color albedo"
 
+
 ##########################################################################
 # Basic scene, inheriting render camera
 
@@ -45,43 +46,13 @@ WorldEnd
 
 FrameEnd
 
+
 ##########################################################################
-# With a custom camera
+# With a custom camera (including depth of field)
 
 FrameBegin 2
 
 Hider "raytrace" "int incremental" [1] "int minsamples" [4] "int maxsamples" [16]
-
-SampleFilter "Perspective" "camera"
-    "point from" [2 5 -8.5] "point to" [0 0.5 0] "float fov" [30]
-
-SampleFilter "Sphere" "earth" "point centre" [0 -10000 0] "float radius" [10000]
-SampleFilter "Sphere" "sphere1" "point centre" [-3 1 0] "float radius" [1]
-SampleFilter "Sphere" "sphere2" "point centre" [0 1 0] "float radius" [1]
-SampleFilter "Sphere" "sphere3" "point centre" [3 1 0] "float radius" [1]
-SampleFilter "Sphere" "sphere4" "point centre" [-1.5 1 1.75] "float radius" [1]
-SampleFilter "Sphere" "sphere5" "point centre" [1.5 1 1.75] "float radius" [1]
-SampleFilter "Sphere" "sphere6" "point centre" [-1.5 1 -1.75] "float radius" [1]
-
-SampleFilter "Default" "integrator"
-    "reference samplefilter camera" ["camera"]
-    "reference samplefilter[7] world" ["earth" "sphere1" "sphere2" "sphere3" "sphere4" "sphere5" "sphere6"]
-
-Format 1280 720 1
-ScreenWindow [-1.778 1.778 -1 1]
-
-WorldBegin
-Sphere 1 -1 1 360
-WorldEnd
-
-FrameEnd
-
-##########################################################################
-# With DOF
-
-FrameBegin 3
-
-Hider "raytrace" "int incremental" [1] "int minsamples" [4] "int maxsamples" [64]
 
 SampleFilter "Perspective" "camera"
     "point from" [2 5 -8.5] "point to" [0 0.5 0] "float fov" [30]
@@ -103,10 +74,44 @@ Format 1280 720 1
 ScreenWindow [-1.778 1.778 -1 1]
 
 WorldBegin
-Sphere 1 -1 1 360
+Sphere 1e10 -1e10 1e10 360
 WorldEnd
 
 FrameEnd
+
+
+##########################################################################
+# With motion blur
+
+FrameBegin 3
+
+Hider "raytrace" "int incremental" [1] "int minsamples" [4] "int maxsamples" [32]
+
+SampleFilter "Perspective" "camera"
+    "point from" [2 5 -8.5] "point to" [0 0.5 0] "float fov" [30]
+    "float focusDist" [9.5] "float aperture" [0.75]
+
+SampleFilter "Sphere" "earth" "point centre" [0 -10000 0] "float radius" [10000]
+SampleFilter "Sphere" "sphere1" "point centre" [-3 1 0] "float radius" [1]
+SampleFilter "Sphere" "sphere2" "point centre" [0 1 0] "float radius" [1]
+SampleFilter "MovingSphere" "sphere3" "point centre0" [3 1 0] "point centre1" [2 1 -1] "float radius" [1]
+SampleFilter "Sphere" "sphere4" "point centre" [-1.5 1 1.75] "float radius" [1]
+SampleFilter "Sphere" "sphere5" "point centre" [1.5 1 1.75] "float radius" [1]
+SampleFilter "Sphere" "sphere6" "point centre" [-1.5 1 -1.75] "float radius" [1]
+
+SampleFilter "Default" "integrator"
+    "reference samplefilter camera" ["camera"]
+    "reference samplefilter[7] world" ["earth" "sphere1" "sphere2" "sphere3" "sphere4" "sphere5" "sphere6"]
+
+Format 1280 720 1
+ScreenWindow [-1.778 1.778 -1 1]
+
+WorldBegin
+Sphere 1e10 -1e10 1e10 360
+WorldEnd
+
+FrameEnd
+
 
 ##########################################################################
 # With occlusion integrator
@@ -122,7 +127,7 @@ SampleFilter "Perspective" "camera"
 SampleFilter "Sphere" "earth" "point centre" [0 -10000 0] "float radius" [10000]
 SampleFilter "Sphere" "sphere1" "point centre" [-3 1 0] "float radius" [1]
 SampleFilter "Sphere" "sphere2" "point centre" [0 1 0] "float radius" [1]
-SampleFilter "Sphere" "sphere3" "point centre" [3 1 0] "float radius" [1]
+SampleFilter "MovingSphere" "sphere3" "point centre0" [3 1 0] "point centre1" [2 1 -1] "float radius" [1]
 SampleFilter "Sphere" "sphere4" "point centre" [-1.5 1 1.75] "float radius" [1]
 SampleFilter "Sphere" "sphere5" "point centre" [1.5 1 1.75] "float radius" [1]
 SampleFilter "Sphere" "sphere6" "point centre" [-1.5 1 -1.75] "float radius" [1]
@@ -135,10 +140,11 @@ Format 1280 720 1
 ScreenWindow [-1.778 1.778 -1 1]
 
 WorldBegin
-Sphere 1 -1 1 360
+Sphere 1e10 -1e10 1e10 360
 WorldEnd
 
 FrameEnd
+
 
 ##########################################################################
 # With pathtracer integrator and materials
@@ -165,7 +171,7 @@ SampleFilter "Sphere" "sphere1" "point centre" [-3 1 0] "float radius" [1]
     "reference samplefilter material" ["shinyCyan"]
 SampleFilter "Sphere" "sphere2" "point centre" [0 1 0] "float radius" [1]
     "reference samplefilter material" ["mirror"]
-SampleFilter "Sphere" "sphere3" "point centre" [3 1 0] "float radius" [1]
+SampleFilter "MovingSphere" "sphere3" "point centre0" [3 1 0] "point centre1" [2.4 1 -0.6] "float radius" [1]
     "reference samplefilter material" ["flatOrange"]
 SampleFilter "Sphere" "sphere4" "point centre" [-1.5 1 1.75] "float radius" [1]
     "reference samplefilter material" ["flatYellow"]
@@ -182,17 +188,18 @@ Format 1280 720 1
 ScreenWindow [-1.778 1.778 -1 1]
 
 WorldBegin
-Sphere 1 -1 1 360
+Sphere 1e10 -1e10 1e10 360
 WorldEnd
 
 FrameEnd
 
+
 ##########################################################################
-# With motion blur
+# With lights
 
 FrameBegin 6
 
-Hider "raytrace" "int incremental" [1] "int minsamples" [4] "int maxsamples" [256]
+Hider "raytrace" "int incremental" [1] "int minsamples" [16] "int maxsamples" [1024]
 
 SampleFilter "Perspective" "camera"
     "point from" [2 5 -8.5] "point to" [0 0.5 0] "float fov" [30]
@@ -205,6 +212,8 @@ SampleFilter "Lambert" "flatOrange" "color albedo" [1 0.5 0.0]
 SampleFilter "Lambert" "flatYellow" "color albedo" [1.0 1.0 0.25]
 SampleFilter "Metal" "shinyGreen" "color albedo" [0.25 0.75 0.25]
 SampleFilter "Lambert" "flatPink" "color albedo" [1.0 0.25 1.0]
+SampleFilter "Light" "fillLight" "color emission" [2 3 4]
+SampleFilter "Light" "keyLight" "color emission" [25 25 20]
 
 SampleFilter "Sphere" "earth" "point centre" [0 -10000 0] "float radius" [10000]
     "reference samplefilter material" ["flatGrey"]
@@ -220,17 +229,24 @@ SampleFilter "Sphere" "sphere5" "point centre" [1.5 1 1.75] "float radius" [1]
     "reference samplefilter material" ["shinyGreen"]
 SampleFilter "Sphere" "sphere6" "point centre" [-1.5 1 -1.75] "float radius" [1]
     "reference samplefilter material" ["flatPink"]
+SampleFilter "Sphere" "sphere7" "point centre" [-10 10 10] "float radius" [2]
+    "reference samplefilter material" ["fillLight"]
+SampleFilter "Sphere" "sphere8" "point centre" [20 15 -8] "float radius" [4]
+    "reference samplefilter material" ["keyLight"]
 
-SampleFilter "Pathtracer" "integrator" "int maxPathLength" [10]
+SampleFilter "Pathtracer" "integrator" "int maxPathLength" [10] "color skyColor" [0.05 0.05 0.05]
     "reference samplefilter camera" ["camera"]
-    "reference samplefilter[7] world" ["earth" "sphere1" "sphere2" "sphere3" "sphere4" "sphere5" "sphere6"]
+    "reference samplefilter[9] world" [
+        "earth"
+        "sphere1" "sphere2" "sphere3" "sphere4" "sphere5" "sphere6"
+        "sphere7" "sphere8"
+    ]
 
 Format 1280 720 1
 ScreenWindow [-1.778 1.778 -1 1]
 
 WorldBegin
-Sphere 1 -1 1 360
+Sphere 1e10 -1e10 1e10 360
 WorldEnd
 
 FrameEnd
-

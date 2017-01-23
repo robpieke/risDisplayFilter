@@ -7,4 +7,4 @@ In early 2016, I ran across Peter Shirley's excellent [Ray Tracing in One Weeken
 
 ## Pre-requisites
 
-To build the code, you'll need to first [download Pixar's RenderMan](https://renderman.pixar.com/view/get-renderman). Any version later than 20.0 should be fine.
+To build the code, you'll need to first [download Pixar's RenderMan](https://renderman.pixar.com/view/get-renderman). Any version later than 21.0 should be fine.

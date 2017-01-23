@@ -1,4 +1,4 @@
-# risSampleFilter
+# sampleFilterRaytracer
 Modular path tracer written using RIS sample filters in PRMan - (Stupid RenderMan Trick 2016)
 
 ## Motivation & Thoughts
